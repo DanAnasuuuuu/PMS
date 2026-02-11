@@ -1,0 +1,7 @@
+{
+  "name": "Sentinels OPS: Personnel & Duty Management",
+  "description": "A comprehensive personnel management and automated duty roster system for paramilitary organizations, featuring smart scheduling, leave tracking, and historical transfer records.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
