@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Personnel, Section, SectionAssignment, GuardDutyRoster
+from .models import Personnel, Section, Assignment, CareerProgression, Qualification, GuardDutyRoster
 from .services import generate_roster_pdf
 from django.http import HttpResponse
 from django.urls import path
@@ -11,14 +11,25 @@ class SectionAdmin(admin.ModelAdmin):
 
 @admin.register(Personnel)
 class PersonnelAdmin(admin.ModelAdmin):
-    list_display = ('service_number', 'rank', 'last_name', 'first_name', 'section', 'status')
-    list_filter = ('rank', 'section', 'status')
+    list_display = ('service_number', 'rank', 'last_name', 'first_name', 'gender', 'state_of_origin')
+    list_filter = ('rank', 'gender', 'state_of_origin')
     search_fields = ('service_number', 'last_name', 'first_name')
 
-@admin.register(SectionAssignment)
-class SectionAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('personnel', 'section', 'start_date', 'end_date')
-    list_filter = ('section',)
+@admin.register(Assignment)
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = ('personnel', 'disposition', 'section', 'sub_unit', 'date_of_posting', 'status')
+    list_filter = ('status', 'section', 'date_of_posting')
+    search_fields = ('personnel__service_number', 'personnel__last_name', 'disposition')
+
+@admin.register(CareerProgression)
+class CareerProgressionAdmin(admin.ModelAdmin):
+    list_display = ('personnel', 'current_rank', 'command_last_served', 'years_in_service')
+    search_fields = ('personnel__service_number', 'personnel__last_name')
+
+@admin.register(Qualification)
+class QualificationAdmin(admin.ModelAdmin):
+    list_display = ('personnel', 'educational_qualification')
+    search_fields = ('personnel__service_number', 'educational_qualification')
 
 @admin.register(GuardDutyRoster)
 class GuardDutyRosterAdmin(admin.ModelAdmin):

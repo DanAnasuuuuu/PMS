@@ -3,12 +3,6 @@ from django.utils import timezone
 
 class Section(models.Model):
     name = models.CharField(max_length=100)
-    # Principal Officer will be linked via OneToOne in Personnel to avoid circular dependency issues at definition time,
-    # or we can use a string reference 'personnel.Personnel'.
-    # However, one section has one principal officer.
-    # Let's define it here as a ForeignKey or OneToOneField. 
-    # If we want to enforce that a personnel can only head one section, OneToOne is good.
-    # Using string reference to handle forward declaration.
     principal_officer = models.OneToOneField(
         'Personnel', 
         on_delete=models.SET_NULL, 
@@ -40,52 +34,72 @@ class Personnel(models.Model):
         ('MAJGEN', 'Major General'),
         ('LTGEN', 'Lieutenant General'),
         ('GEN', 'General'),
-        # Add more as needed or make dynamic
+    ]
+
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+    ]
+
+    MARITAL_STATUS_CHOICES = [
+        ('SINGLE', 'Single'),
+        ('MARRIED', 'Married'),
+        ('DIVORCED', 'Divorced'),
+        ('WIDOWED', 'Widowed'),
     ]
 
     service_number = models.CharField(max_length=20, unique=True, primary_key=True)
     first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    rank = models.CharField(max_length=10, choices=RANK_CHOICES)
-    
-    # Current section (mostly for convenience, though history is in Assignment)
-    # We can use a property or keep a field for current status.
-    # The requirements say "SectionAssignment (Temporal): Track history...".
-    # But usually a current_section field is useful for simple queries.
-    # I'll add it and keep it synced with the latest assignment.
-    section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True, blank=True)
-    
+    last_name = models.CharField(max_length=50, verbose_name="Surname")
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='M')
     dob = models.DateField(verbose_name="Date of Birth")
-    date_of_enlistment = models.DateField()
-    date_of_last_promotion = models.DateField(null=True, blank=True)
+    marital_status = models.CharField(max_length=10, choices=MARITAL_STATUS_CHOICES, default='SINGLE')
     
     state_of_origin = models.CharField(max_length=50)
-    lga_of_origin = models.CharField(max_length=50, verbose_name="LGA of Origin")
-    qualification = models.CharField(max_length=100)
+    lga_of_origin = models.CharField(max_length=50, verbose_name="LGA")
+    date_of_enlistment = models.DateField()
     
-    # Status for Guard Duty eligibility
-    STATUS_CHOICES = [
-        ('ACTIVE', 'Active'),
-        ('LEAVE', 'On Leave'),
-        ('SICK', 'Sick/Excused'),
-        ('DEPLOYED', 'Deployed/Unavailable'),
-    ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
-
+    # Kept for backward compatibility/ease of access, though history is in CareerProgression
+    rank = models.CharField(max_length=10, choices=RANK_CHOICES)
+    
     def __str__(self):
         return f"{self.rank} {self.last_name} {self.first_name} ({self.service_number})"
 
-class SectionAssignment(models.Model):
+class Assignment(models.Model):
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('ON_LEAVE', 'On Leave'),
+        ('TRANSFERRED', 'Transferred'),
+        ('SUSPENDED', 'Suspended'),
+    ]
+
     personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='assignments')
-    section = models.ForeignKey(Section, on_delete=models.CASCADE)
-    start_date = models.DateField(default=timezone.now)
-    end_date = models.DateField(null=True, blank=True)
-    
-    class Meta:
-        ordering = ['-start_date']
+    disposition = models.CharField(max_length=100, help_text="e.g., SDS, Escort Commander")
+    section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True, blank=True)
+    sub_unit = models.CharField(max_length=100, blank=True, help_text="e.g., Transport, Govt House Unit")
+    date_of_posting = models.DateField(default=timezone.now)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
 
     def __str__(self):
-        return f"{self.personnel} -> {self.section} ({self.start_date})"
+        return f"{self.personnel} - {self.disposition} ({self.status})"
+
+class CareerProgression(models.Model):
+    personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='career_history')
+    current_rank = models.CharField(max_length=10, choices=Personnel.RANK_CHOICES)
+    date_of_last_promotion = models.DateField(null=True, blank=True)
+    date_of_last_transfer = models.DateField(null=True, blank=True)
+    command_last_served = models.CharField(max_length=100, help_text="Previous Command")
+    years_in_service = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.personnel} - {self.current_rank}"
+
+class Qualification(models.Model):
+    personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='qualifications')
+    educational_qualification = models.CharField(max_length=100, help_text="e.g. B.Sc, MSc, SSCE")
+
+    def __str__(self):
+        return f"{self.personnel} - {self.educational_qualification}"
 
 class GuardDutyRoster(models.Model):
     SHIFT_CHOICES = [
