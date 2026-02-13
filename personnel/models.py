@@ -16,24 +16,20 @@ class Section(models.Model):
 
 class Personnel(models.Model):
     RANK_CHOICES = [
-        ('PTE', 'Private'),
-        ('LCPL', 'Lance Corporal'),
-        ('CPL', 'Corporal'),
-        ('SGT', 'Sergeant'),
-        ('SSGT', 'Staff Sergeant'),
-        ('WO', 'Warrant Officer'),
-        ('MWO', 'Master Warrant Officer'),
-        ('AWO', 'Army Warrant Officer'),
-        ('2LT', 'Second Lieutenant'),
-        ('LT', 'Lieutenant'),
-        ('CAPT', 'Captain'),
-        ('MAJ', 'Major'),
-        ('LTCOL', 'Lieutenant Colonel'),
-        ('COL', 'Colonel'),
-        ('BRIG', 'Brigadier General'),
-        ('MAJGEN', 'Major General'),
-        ('LTGEN', 'Lieutenant General'),
-        ('GEN', 'General'),
+        ('DII', 'DII'),
+        ('DI', 'DI'),
+        ('CD', 'CD'),
+        ('ASO', 'ASO'),
+        ('SO', 'SO'),
+        ('SIOII', 'SIOII'),
+        ('SIOI', 'SIOI'),
+        ('SSIO', 'SSIO'),
+        ('PSIO', 'PSIO'),
+        ('CSIO', 'CSIO'),
+        ('ADIS', 'ADIS'),
+        ('DDIS', 'DDIS'),
+        ('DIS', 'DIS'),
+        ('ADG', 'ADG'),
     ]
 
     GENDER_CHOICES = [

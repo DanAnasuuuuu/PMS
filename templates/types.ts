@@ -1,22 +1,24 @@
 
 export enum Rank {
-  CADET = 'Cadet',
-  OFFICER_III = 'Officer III',
-  OFFICER_II = 'Officer II',
-  OFFICER_I = 'Officer I',
-  SERGEANT = 'Sergeant',
-  INSPECTOR = 'Inspector',
-  CHIEF_INSPECTOR = 'Chief Inspector',
-  COMMANDER = 'Commander'
+  DII = 'DII',
+  DI = 'DI',
+  CD = 'CD',
+  ASO = 'ASO',
+  SO = 'SO',
+  SIOII = 'SIOII',
+  SIOI = 'SIOI',
+  SSIO = 'SSIO',
+  PSIO = 'PSIO',
+  CSIO = 'CSIO',
+  ADIS = 'ADIS',
+  DDIS = 'DDIS',
+  DIS = 'DIS',
+  ADG = 'ADG'
 }
 
-export enum Section {
-  OPERATIONS = 'Operations',
-  INTELLIGENCE = 'Intelligence',
-  LOGISTICS = 'Logistics',
-  ADMINISTRATION = 'Administration',
-  COMMUNICATIONS = 'Communications',
-  TRAINING = 'Training'
+export interface SectionData {
+  id: number;
+  name: string;
 }
 
 export enum LeaveType {
@@ -47,10 +49,25 @@ export interface Personnel {
   serviceId: string;
   firstName: string;
   lastName: string;
-  rank: Rank;
-  section: Section;
+  rank: string;
+  section: string;
   status: 'Active' | 'On Leave' | 'Suspended' | 'Retired';
   joinedDate: string;
+}
+
+export interface PersonnelFormData {
+  serviceNumber: string;
+  firstName: string;
+  lastName: string;
+  rank: string;
+  gender: 'M' | 'F';
+  dateOfBirth: string;
+  maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED';
+  stateOfOrigin: string;
+  lgaOfOrigin: string;
+  dateOfEnlistment: string;
+  sectionId?: number;
+  disposition?: string;
 }
 
 export interface LeaveRecord {
@@ -74,8 +91,8 @@ export interface DutyAssignment {
 export interface TransferHistory {
   id: string;
   personnelId: string;
-  fromSection: Section;
-  toSection: Section;
+  fromSection: string;
+  toSection: string;
   transferDate: string;
   reason: string;
 }
@@ -85,3 +102,4 @@ export interface User {
   username: string;
   role: 'Administrator' | 'Viewer';
 }
+

@@ -1,15 +1,15 @@
 
-import { Personnel, Rank, Section, LeaveRecord, LeaveType, DutyAssignment, DutyType, Shift } from './types';
+import { Personnel, LeaveRecord, LeaveType, DutyAssignment, DutyType, Shift } from './types';
 
 export const mockPersonnel: Personnel[] = [
-  { id: '1', serviceId: 'SO-001', firstName: 'John', lastName: 'Doe', rank: Rank.SERGEANT, section: Section.OPERATIONS, status: 'Active', joinedDate: '2020-01-15' },
-  { id: '2', serviceId: 'SO-002', firstName: 'Jane', lastName: 'Smith', rank: Rank.OFFICER_I, section: Section.INTELLIGENCE, status: 'Active', joinedDate: '2021-03-22' },
-  { id: '3', serviceId: 'SO-003', firstName: 'Robert', lastName: 'Brown', rank: Rank.OFFICER_II, section: Section.LOGISTICS, status: 'On Leave', joinedDate: '2019-11-10' },
-  { id: '4', serviceId: 'SO-004', firstName: 'Alice', lastName: 'Wilson', rank: Rank.CADET, section: Section.OPERATIONS, status: 'Active', joinedDate: '2023-06-05' },
-  { id: '5', serviceId: 'SO-005', firstName: 'Michael', lastName: 'Chen', rank: Rank.INSPECTOR, section: Section.ADMINISTRATION, status: 'Active', joinedDate: '2018-02-28' },
-  { id: '6', serviceId: 'SO-006', firstName: 'Sarah', lastName: 'Taylor', rank: Rank.OFFICER_I, section: Section.TRAINING, status: 'Active', joinedDate: '2022-09-14' },
-  { id: '7', serviceId: 'SO-007', firstName: 'Kevin', lastName: 'Davis', rank: Rank.OFFICER_III, section: Section.COMMUNICATIONS, status: 'Active', joinedDate: '2023-01-10' },
-  { id: '8', serviceId: 'SO-008', firstName: 'Emma', lastName: 'White', rank: Rank.CHIEF_INSPECTOR, section: Section.OPERATIONS, status: 'Active', joinedDate: '2015-05-12' },
+  { id: '1', serviceId: 'SO-001', firstName: 'John', lastName: 'Doe', rank: 'SO', section: 'Operations', status: 'Active', joinedDate: '2020-01-15' },
+  { id: '2', serviceId: 'SO-002', firstName: 'Jane', lastName: 'Smith', rank: 'SIOI', section: 'Intelligence', status: 'Active', joinedDate: '2021-03-22' },
+  { id: '3', serviceId: 'SO-003', firstName: 'Robert', lastName: 'Brown', rank: 'SIOII', section: 'Logistics', status: 'On Leave', joinedDate: '2019-11-10' },
+  { id: '4', serviceId: 'SO-004', firstName: 'Alice', lastName: 'Wilson', rank: 'DII', section: 'Operations', status: 'Active', joinedDate: '2023-06-05' },
+  { id: '5', serviceId: 'SO-005', firstName: 'Michael', lastName: 'Chen', rank: 'ADIS', section: 'Administration', status: 'Active', joinedDate: '2018-02-28' },
+  { id: '6', serviceId: 'SO-006', firstName: 'Sarah', lastName: 'Taylor', rank: 'SSIO', section: 'Training', status: 'Active', joinedDate: '2022-09-14' },
+  { id: '7', serviceId: 'SO-007', firstName: 'Kevin', lastName: 'Davis', rank: 'CD', section: 'Communications', status: 'Active', joinedDate: '2023-01-10' },
+  { id: '8', serviceId: 'SO-008', firstName: 'Emma', lastName: 'White', rank: 'PSIO', section: 'Operations', status: 'Active', joinedDate: '2015-05-12' },
 ];
 
 export const mockLeaves: LeaveRecord[] = [

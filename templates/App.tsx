@@ -18,11 +18,12 @@ import {
   Activity,
   Sun,
   Moon,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Settings
 } from 'lucide-react';
-import { Personnel, LeaveRecord, DutyAssignment, User, DutyType, Rank, Section, Shift } from './types';
+import { Personnel, LeaveRecord, DutyAssignment, User, DutyType, Rank, Shift, PersonnelFormData, SectionData } from './types';
 import { mockLeaves, mockDuties } from './mockData';
-import { getPersonnel } from './api';
+import { getPersonnel, createPersonnel, getSections } from './api';
 import { generateSmartRoster } from './geminiService';
 
 const ThemeContext = createContext({ isDarkMode: false, toggleTheme: () => { } });
@@ -362,9 +363,269 @@ const DashboardView: React.FC<{
   );
 };
 
-const PersonnelView: React.FC<{ personnel: Personnel[]; onView: (id: string) => void }> = ({ personnel, onView }) => {
+// Add Personnel Modal Component
+const AddPersonnelModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void }> = ({ isOpen, onClose, onSuccess }) => {
+  const { isDarkMode } = useContext(ThemeContext);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sections, setSections] = useState<SectionData[]>([]);
+
+  const [formData, setFormData] = useState<PersonnelFormData>({
+    serviceNumber: '',
+    firstName: '',
+    lastName: '',
+    rank: 'DII',
+    gender: 'M',
+    dateOfBirth: '',
+    maritalStatus: 'SINGLE',
+    stateOfOrigin: '',
+    lgaOfOrigin: '',
+    dateOfEnlistment: '',
+    sectionId: undefined,
+    disposition: 'General Duty'
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      getSections().then(setSections);
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await createPersonnel(formData);
+      onSuccess();
+      onClose();
+      // Reset form
+      setFormData({
+        serviceNumber: '',
+        firstName: '',
+        lastName: '',
+        rank: 'DII',
+        gender: 'M',
+        dateOfBirth: '',
+        maritalStatus: 'SINGLE',
+        stateOfOrigin: '',
+        lgaOfOrigin: '',
+        dateOfEnlistment: '',
+        sectionId: undefined,
+        disposition: 'General Duty'
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create personnel');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className={`max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl ${isDarkMode ? 'bg-[#333333]' : 'bg-white'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`sticky top-0 px-6 py-4 border-b flex justify-between items-center ${isDarkMode ? 'bg-[#333333] border-[#D1D3D4]/10' : 'bg-white border-[#D1D3D4]'}`}>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#333333]'}`}>Add New Personnel</h2>
+          <button onClick={onClose} className={`text-2xl ${isDarkMode ? 'text-[#D1D3D4] hover:text-white' : 'text-[#333333] hover:text-[#1A1A1B]'}`}>×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          {error && (
+            <div className="mb-4 p-4 bg-[#EF2B33]/10 border border-[#EF2B33] rounded-lg text-[#EF2B33] text-sm whitespace-pre-line">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Service Number */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Service Number *</label>
+              <input
+                type="text"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.serviceNumber}
+                onChange={(e) => setFormData({ ...formData, serviceNumber: e.target.value })}
+              />
+            </div>
+
+            {/* First Name */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>First Name *</label>
+              <input
+                type="text"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Last Name *</label>
+              <input
+                type="text"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              />
+            </div>
+
+            {/* Rank */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Rank *</label>
+              <select
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.rank}
+                onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
+              >
+                {Object.entries(Rank).map(([key, value]) => (
+                  <option key={key} value={key}>{value}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Gender *</label>
+              <select
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'M' | 'F' })}
+              >
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </div>
+
+            {/* Date of Birth */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Date of Birth *</label>
+              <input
+                type="date"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              />
+            </div>
+
+            {/* Marital Status */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Marital Status *</label>
+              <select
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.maritalStatus}
+                onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value as any })}
+              >
+                <option value="SINGLE">Single</option>
+                <option value="MARRIED">Married</option>
+                <option value="DIVORCED">Divorced</option>
+                <option value="WIDOWED">Widowed</option>
+              </select>
+            </div>
+
+            {/* State of Origin */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>State of Origin *</label>
+              <input
+                type="text"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.stateOfOrigin}
+                onChange={(e) => setFormData({ ...formData, stateOfOrigin: e.target.value })}
+              />
+            </div>
+
+            {/* LGA of Origin */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>LGA of Origin *</label>
+              <input
+                type="text"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.lgaOfOrigin}
+                onChange={(e) => setFormData({ ...formData, lgaOfOrigin: e.target.value })}
+              />
+            </div>
+
+            {/* Date of Enlistment */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Date of Enlistment *</label>
+              <input
+                type="date"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.dateOfEnlistment}
+                onChange={(e) => setFormData({ ...formData, dateOfEnlistment: e.target.value })}
+              />
+            </div>
+
+            {/* Section */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Section</label>
+              <select
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.sectionId || ''}
+                onChange={(e) => setFormData({ ...formData, sectionId: e.target.value ? parseInt(e.target.value) : undefined })}
+              >
+                <option value="">Unassigned</option>
+                {sections.map(section => (
+                  <option key={section.id} value={section.id}>{section.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Disposition */}
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Disposition</label>
+              <input
+                type="text"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.disposition}
+                onChange={(e) => setFormData({ ...formData, disposition: e.target.value })}
+                placeholder="e.g., General Duty, SDS, Escort Commander"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'bg-[#1A1A1B] text-[#D1D3D4] hover:bg-[#1A1A1B]/80' : 'bg-[#D1D3D4]/30 text-[#333333] hover:bg-[#D1D3D4]/50'}`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-[#00A859] text-white rounded-lg font-medium hover:bg-[#008547] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Adding...' : 'Add Personnel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const PersonnelView: React.FC<{ personnel: Personnel[]; onView: (id: string) => void; onRefresh: () => void }> = ({ personnel, onView, onRefresh }) => {
   const { isDarkMode } = useContext(ThemeContext);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const filtered = personnel.filter(p =>
     `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.serviceId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -383,7 +644,10 @@ const PersonnelView: React.FC<{ personnel: Personnel[]; onView: (id: string) => 
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="flex items-center justify-center space-x-2 bg-[#00A859] text-white px-4 py-2 rounded-lg hover:bg-[#008547] transition-colors">
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center justify-center space-x-2 bg-[#00A859] text-white px-4 py-2 rounded-lg hover:bg-[#008547] transition-colors"
+        >
           <UserPlus size={18} />
           <span className="font-medium">Add Personnel</span>
         </button>
@@ -425,6 +689,12 @@ const PersonnelView: React.FC<{ personnel: Personnel[]; onView: (id: string) => 
           </tbody>
         </table>
       </div>
+
+      <AddPersonnelModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={onRefresh}
+      />
     </div>
   );
 };
@@ -578,12 +848,13 @@ export default function App() {
   const [personnelData, setPersonnelData] = useState<Personnel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchData = async () => {
+    const data = await getPersonnel();
+    setPersonnelData(data);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const data = await getPersonnel();
-      setPersonnelData(data);
-      setIsLoading(false);
-    };
     fetchData();
   }, []);
 
@@ -602,6 +873,7 @@ export default function App() {
     { id: 'transfers', label: 'Transfers', icon: <ArrowRightLeft size={20} /> },
     { id: 'rosters', label: 'Duty Rosters', icon: <ClipboardList size={20} /> },
     { id: 'reports', label: 'Reports', icon: <FileText size={20} /> },
+    { id: 'admin', label: 'Admin Panel', icon: <Settings size={20} />, href: 'http://127.0.0.1:8000/admin/' },
   ];
 
   return (
@@ -619,13 +891,27 @@ export default function App() {
 
           <nav className="flex-1 px-4 space-y-2">
             {menuItems.map((item) => (
-              <SidebarItem
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                active={activeTab === item.id}
-                onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }}
-              />
+              item.href ? (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-[#D1D3D4] hover:bg-[#333333] hover:text-white"
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  {item.icon}
+                  <span className="font-medium">{item.label}</span>
+                </a>
+              ) : (
+                <SidebarItem
+                  key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  active={activeTab === item.id}
+                  onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }}
+                />
+              )
             ))}
           </nav>
         </aside>
@@ -657,14 +943,27 @@ export default function App() {
 
             <nav className="hidden md:flex items-center space-x-8">
               {menuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
-                  className={`text-sm font-medium transition-colors flex items-center space-x-2 ${activeTab === item.id ? 'text-[#00A859]' : `${isDarkMode ? 'text-[#D1D3D4] hover:text-[#00A859]' : 'text-[#333333] hover:text-[#00A859]'}`
-                    }`}
-                >
-                  {item.label}
-                </button>
+                item.href ? (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-sm font-medium transition-colors flex items-center space-x-2 ${isDarkMode ? 'text-[#D1D3D4] hover:text-[#00A859]' : 'text-[#333333] hover:text-[#00A859]'
+                      }`}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id as any)}
+                    className={`text-sm font-medium transition-colors flex items-center space-x-2 ${activeTab === item.id ? 'text-[#00A859]' : `${isDarkMode ? 'text-[#D1D3D4] hover:text-[#00A859]' : 'text-[#333333] hover:text-[#00A859]'}`
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                )
               ))}
             </nav>
 
@@ -698,7 +997,7 @@ export default function App() {
                 onViewTransfers={() => setActiveTab('transfers')}
               />
             )}
-            {activeTab === 'personnel' && <PersonnelView personnel={personnelData} onView={handleViewPersonnel} />}
+            {activeTab === 'personnel' && <PersonnelView personnel={personnelData} onView={handleViewPersonnel} onRefresh={() => fetchData()} />}
             {activeTab === 'personnel-detail' && selectedPersonnelId && (
               <PersonnelDetailView
                 personnel={personnelData.find(p => p.id === selectedPersonnelId)!}
