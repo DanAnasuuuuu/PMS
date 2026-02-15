@@ -1,12 +1,30 @@
 from rest_framework import serializers
-from .models import Personnel, Assignment, Section
+from .models import Personnel, Assignment, Section, Leave, Department, Designation
 from django.utils import timezone
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    """Serializer for Department model - used in dropdowns"""
+    class Meta:
+        model = Department
+        fields = ['id', 'name', 'description']
 
 class SectionSerializer(serializers.ModelSerializer):
     """Serializer for Section model - used in dropdowns"""
+    department = serializers.PrimaryKeyRelatedField(read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    
     class Meta:
         model = Section
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'department', 'department_name']
+
+class DesignationSerializer(serializers.ModelSerializer):
+    """Serializer for Designation model - used in dropdowns"""
+    section_name = serializers.CharField(source='section.name', read_only=True)
+    department_name = serializers.CharField(source='section.department.name', read_only=True)
+    
+    class Meta:
+        model = Designation
+        fields = ['id', 'name', 'section', 'section_name', 'department_name', 'description']
 
 class PersonnelSerializer(serializers.ModelSerializer):
     """Read-only serializer for listing personnel"""
@@ -146,3 +164,100 @@ class PersonnelCreateUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         
         return instance
+
+class LeaveSerializer(serializers.ModelSerializer):
+    """Read-only serializer for Leave - returns formatted data for frontend"""
+    id = serializers.IntegerField(read_only=True)
+    personnelId = serializers.CharField(source='personnel.service_number', read_only=True)
+    personnelName = serializers.SerializerMethodField()
+    leaveType = serializers.CharField(source='get_leave_type_display', read_only=True)
+    startDate = serializers.DateField(source='start_date', read_only=True)
+    endDate = serializers.DateField(source='end_date', read_only=True)
+    resumptionDate = serializers.DateField(source='resumption_date', read_only=True)
+    daysCount = serializers.IntegerField(source='days_count', read_only=True)
+    requestedDate = serializers.DateTimeField(source='requested_date', read_only=True)
+    approvedBy = serializers.SerializerMethodField()
+    approvedDate = serializers.DateTimeField(source='approved_date', read_only=True)
+    rejectionReason = serializers.CharField(source='rejection_reason', read_only=True)
+    
+    class Meta:
+        model = Leave
+        fields = [
+            'id', 'personnelId', 'personnelName', 'leaveType', 'startDate', 
+            'endDate', 'resumptionDate', 'reason', 'status', 'daysCount',
+            'requestedDate', 'approvedBy', 'approvedDate', 'rejectionReason'
+        ]
+    
+    def get_personnelName(self, obj):
+        return f"{obj.personnel.first_name} {obj.personnel.last_name}"
+    
+    def get_approvedBy(self, obj):
+        if obj.approved_by:
+            return obj.approved_by.username
+        return None
+
+class LeaveCreateUpdateSerializer(serializers.ModelSerializer):
+    """Write serializer for Leave - handles create/update with validation"""
+    personnelId = serializers.CharField(source='personnel_id', write_only=True)
+    leaveType = serializers.ChoiceField(source='leave_type', choices=Leave.LEAVE_TYPE_CHOICES)
+    startDate = serializers.DateField(source='start_date')
+    endDate = serializers.DateField(source='end_date')
+    resumptionDate = serializers.DateField(source='resumption_date', required=False, allow_null=True)
+    
+    class Meta:
+        model = Leave
+        fields = [
+            'personnelId', 'leaveType', 'startDate', 'endDate', 
+            'resumptionDate', 'reason'
+        ]
+    
+    def validate(self, data):
+        """Validate leave dates and check for overlaps"""
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        personnel_id = data.get('personnel_id')
+        
+        # Validate date range
+        if start_date and end_date and end_date < start_date:
+            raise serializers.ValidationError("End date must be after start date")
+        
+        # Check for overlapping leaves
+        if personnel_id:
+            try:
+                personnel = Personnel.objects.get(service_number=personnel_id)
+                overlapping = Leave.objects.filter(
+                    personnel=personnel,
+                    status__in=['PENDING', 'APPROVED']
+                ).filter(
+                    start_date__lte=end_date,
+                    end_date__gte=start_date
+                )
+                
+                # Exclude current instance if updating
+                if self.instance:
+                    overlapping = overlapping.exclude(id=self.instance.id)
+                
+                if overlapping.exists():
+                    raise serializers.ValidationError(
+                        "Personnel already has an overlapping leave request"
+                    )
+            except Personnel.DoesNotExist:
+                raise serializers.ValidationError(f"Personnel with service number {personnel_id} not found")
+        
+        return data
+    
+    def create(self, validated_data):
+        """Create new leave request"""
+        personnel_id = validated_data.pop('personnel_id')
+        
+        try:
+            personnel = Personnel.objects.get(service_number=personnel_id)
+        except Personnel.DoesNotExist:
+            raise serializers.ValidationError(f"Personnel with service number {personnel_id} not found")
+        
+        leave = Leave.objects.create(
+            personnel=personnel,
+            **validated_data
+        )
+        
+        return leave

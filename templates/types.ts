@@ -71,12 +71,29 @@ export interface PersonnelFormData {
 }
 
 export interface LeaveRecord {
-  id: string;
+  id: number;
   personnelId: string;
-  type: LeaveType;
+  personnelName: string;
+  leaveType: string;
   startDate: string;
   endDate: string;
-  status: 'Approved' | 'Completed' | 'Cancelled';
+  resumptionDate: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+  daysCount: number;
+  requestedDate: string;
+  approvedBy?: string;
+  approvedDate?: string;
+  rejectionReason?: string;
+}
+
+export interface LeaveFormData {
+  personnelId: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  resumptionDate?: string;
+  reason: string;
 }
 
 export interface DutyAssignment {

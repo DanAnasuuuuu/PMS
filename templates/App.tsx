@@ -21,9 +21,9 @@ import {
   ArrowRightLeft,
   Settings
 } from 'lucide-react';
-import { Personnel, LeaveRecord, DutyAssignment, User, DutyType, Rank, Shift, PersonnelFormData, SectionData } from './types';
+import { Personnel, LeaveRecord, DutyAssignment, User, DutyType, Rank, Shift, PersonnelFormData, SectionData, LeaveFormData } from './types';
 import { mockLeaves, mockDuties } from './mockData';
-import { getPersonnel, createPersonnel, getSections } from './api';
+import { getPersonnel, createPersonnel, getSections, getLeaves, createLeave, approveLeave, rejectLeave, cancelLeave } from './api';
 import { generateSmartRoster } from './geminiService';
 
 const ThemeContext = createContext({ isDarkMode: false, toggleTheme: () => { } });
@@ -614,6 +614,176 @@ const AddPersonnelModal: React.FC<{ isOpen: boolean; onClose: () => void; onSucc
               className="px-6 py-2 bg-[#00A859] text-white rounded-lg font-medium hover:bg-[#008547] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Adding...' : 'Add Personnel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const AddLeaveModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; personnel: Personnel[] }> = ({ isOpen, onClose, onSuccess, personnel }) => {
+  const { isDarkMode } = useContext(ThemeContext);
+  const [formData, setFormData] = useState<LeaveFormData>({
+    personnelId: '',
+    leaveType: 'ANNUAL',
+    startDate: '',
+    endDate: '',
+    resumptionDate: '',
+    reason: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const leaveTypes = [
+    { value: 'ANNUAL', label: 'Annual Leave' },
+    { value: 'CASUAL', label: 'Casual Leave' },
+    { value: 'SICK', label: 'Sick Leave' },
+    { value: 'MATERNITY', label: 'Maternity Leave' },
+    { value: 'PATERNITY', label: 'Paternity Leave' },
+    { value: 'COMPASSIONATE', label: 'Compassionate Leave' },
+    { value: 'STUDY', label: 'Study Leave' }
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await createLeave(formData);
+      // Reset form
+      setFormData({
+        personnelId: '',
+        leaveType: 'ANNUAL',
+        startDate: '',
+        endDate: '',
+        resumptionDate: '',
+        reason: ''
+      });
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create leave request');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className={`rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-[#1A1A1B]' : 'bg-white'}`}>
+        <div className={`px-6 py-4 border-b flex justify-between items-center sticky top-0 z-10 ${isDarkMode ? 'bg-[#1A1A1B] border-[#333333]' : 'bg-white border-[#D1D3D4]'}`}>
+          <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#333333]'}`}>New Leave Request</h3>
+          <button onClick={onClose} className={`${isDarkMode ? 'text-[#D1D3D4] hover:text-white' : 'text-[#333333] hover:text-[#EF2B33]'}`}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="bg-[#EF2B33]/10 border border-[#EF2B33] text-[#EF2B33] px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Personnel Selection */}
+          <div>
+            <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Personnel *</label>
+            <select
+              required
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+              value={formData.personnelId}
+              onChange={(e) => setFormData({ ...formData, personnelId: e.target.value })}
+            >
+              <option value="">Select Personnel</option>
+              {personnel.map(p => (
+                <option key={p.id} value={p.serviceId}>
+                  {p.serviceId} - {p.firstName} {p.lastName} ({p.rank})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Leave Type */}
+          <div>
+            <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Leave Type *</label>
+            <select
+              required
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+              value={formData.leaveType}
+              onChange={(e) => setFormData({ ...formData, leaveType: e.target.value })}
+            >
+              {leaveTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Start Date *</label>
+              <input
+                type="date"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>End Date *</label>
+              <input
+                type="date"
+                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Resumption Date (Optional) */}
+          <div>
+            <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Resumption Date (Optional)</label>
+            <input
+              type="date"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+              value={formData.resumptionDate}
+              onChange={(e) => setFormData({ ...formData, resumptionDate: e.target.value })}
+            />
+            <p className={`text-xs mt-1 ${isDarkMode ? 'text-[#D1D3D4]/50' : 'text-[#333333]/50'}`}>Leave blank to auto-calculate (day after end date)</p>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-[#D1D3D4]' : 'text-[#333333]'}`}>Reason *</label>
+            <textarea
+              required
+              rows={4}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00A859] outline-none resize-none ${isDarkMode ? 'bg-[#333333] border-[#333333] text-white' : 'bg-white border-[#D1D3D4]'}`}
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              placeholder="Enter reason for leave..."
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'bg-[#333333] text-white hover:bg-[#1A1A1B]' : 'bg-[#D1D3D4]/30 text-[#333333] hover:bg-[#D1D3D4]/50'}`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-[#00A859] text-white rounded-lg font-medium hover:bg-[#008547] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </button>
           </div>
         </form>
